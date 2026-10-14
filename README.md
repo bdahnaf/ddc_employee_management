@@ -1,58 +1,96 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# DDC Workforce
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Employee management system for **Development Design Consultants Limited (DDC)**.
 
-## About Laravel
+It keeps one staff register for the whole firm: which **division** and **department** each person belongs to, and whether they are posted at **Head Office (HQ)** or on a **project**. Everything is exposed through a REST API documented with Swagger, so other DDC systems (such as the EOI management system) can use the same data.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+> Status: early development. The homepage is done. The data model, API and Swagger docs are next.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Organisation model
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+DDC
+ └── Division            (e.g. Building & Planning, Roads & Bridges, ICT)
+      └── Department     (e.g. Architecture, Structural)
+           └── Employee
+                └── Posting  →  HQ  or  Project
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+- A **division** has many departments.
+- A **department** has many employees.
+- An **employee** has exactly one current **posting**, either HQ or a project. Earlier postings are kept as history (transfers).
+- Divisions, departments, projects, HQ and employees each support full CRUD (create, read, update, delete) through the API.
 
-## Contributing
+## Tech stack
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Part | Choice |
+|---|---|
+| Backend | Laravel 13 (PHP 8.3+) |
+| Database | SQLite in development (`database/database.sqlite`) |
+| Frontend build | Vite |
+| API docs | Swagger / OpenAPI (planned: `/api/documentation`) |
 
-## Code of Conduct
+## Getting started
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# 1. Install PHP and JS dependencies
+composer install
+npm install
 
-## Security Vulnerabilities
+# 2. Environment
+cp .env.example .env        # skip if .env already exists
+php artisan key:generate
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 3. Database
+php artisan migrate
 
-## License
+# 4. Run (two terminals)
+php artisan serve           # http://localhost:8000
+npm run dev                 # Vite: CSS/JS with hot reload
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+For a production build of the assets: `npm run build`.
+
+## Project layout
+
+```
+routes/web.php                  web pages ( / → home )
+resources/views/home.blade.php  public homepage
+resources/css/home.css          homepage styles (brand colours as CSS variables)
+resources/js/home.js            homepage behaviour (scroll reveal, menu, posting demo)
+vite.config.js                  asset entry points
+docs/database/                  ER diagram (dot/png/svg/pdf) and table notes
+```
+
+More folders (API controllers, models, migrations, docs) will be listed here as they are added.
+
+## Design notes
+
+The homepage follows the look of [ddclbd.com](https://www.ddclbd.com/):
+
+| Token | Hex | Use |
+|---|---|---|
+| `--maroon` / `--maroon-dark` | `#8e2219` / `#6e1812` | logo block, feature band, sector hover |
+| `--brick` | `#b54d3d` | pill buttons and accents (same as DDC's buttons) |
+| `--head` / `--text` | `#444444` / `#555555` | headings / body text |
+| `--soft` / white | `#f9f9f9` / `#ffffff` | section backgrounds |
+| `--green` / `--amber` / `--leave` | `#3d8b5f` / `#d59a2a` / `#5f7bb0` | project posting, late, leave |
+
+Fonts (same as ddclbd.com): **Arimo** for headings, **Lato** for text, **Rubik** for uppercase pill buttons.
+
+Animations are kept light: a line drawing in the hero, gentle fade-in on scroll, the structure line filling in,
+and the sample profile switching between Project and HQ. All respect the *reduce motion* setting.
+The homepage uses placeholder labels and bars instead of invented names or numbers.
+
+## Roadmap
+
+- [x] Homepage
+- [x] ER diagram, draft 1 (`docs/database/`)
+- [ ] Database: divisions, departments, projects, employees, postings
+- [ ] REST API (`/api/v1/...`) with CRUD for each resource
+- [ ] Swagger / OpenAPI documentation
+- [ ] Login and roles
+- [ ] Connection to the EOI management system
+- [ ] Code guide in `docs/`
