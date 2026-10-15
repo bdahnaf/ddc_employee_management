@@ -4,7 +4,7 @@ Employee management system for **Development Design Consultants Limited (DDC)**.
 
 It keeps one staff register for the whole firm: which **division** and **department** each person belongs to, and whether they are posted at **Head Office (HQ)** or on a **project**. Everything is exposed through a REST API documented with Swagger, so other DDC systems (such as the EOI management system) can use the same data.
 
-> Status: early development. The homepage is done. The data model, API and Swagger docs are next.
+> Status: early development. Homepage, sign-in, the staff directory with photo cards, employee profiles, transfers, salary history and HR management of divisions, departments, Head Office and projects are done. The REST API + Swagger and attendance are next.
 
 ---
 
@@ -22,6 +22,41 @@ DDC
 - A **department** has many employees.
 - An **employee** has exactly one current **posting**, either HQ or a project. Earlier postings are kept as history (transfers).
 - Divisions, departments, projects, HQ and employees each support full CRUD (create, read, update, delete) through the API.
+
+## Open access (for now)
+
+While the permission rules are being decided, **sign-in is switched off**: every page, the Manage menu and all private details are open to anyone who opens the site. The top bar shows an "Open access" badge.
+
+Everything for sign-in and roles is still in the code. To switch it back on, add this to `.env`:
+
+```
+WORKFORCE_OPEN_ACCESS=false
+```
+
+## Who uses it (once sign-in is on)
+
+Only DDC staff, with an email + password account created by HR (no public sign-up).
+
+| Role | Sees |
+|---|---|
+| **HR** | Everything, including salary, NID, TIN, bank and personal details. Manages accounts and all records. |
+| **Head** (division / department head) | Staff directory and basic profiles, plus attendance and leave for their own team. |
+| **Employee** | Staff directory and basic profiles, plus their own full profile. |
+
+Details: [docs/auth.md](docs/auth.md) (sign-in and roles) and [docs/directory.md](docs/directory.md) (directory, profiles, what is private).
+
+## Main pages
+
+| Page | URL | Who |
+|---|---|---|
+| Homepage with links into the app | `/` | Everyone |
+| Staff directory (photo cards, filter by division / department / Head Office / project) | `/directory` | Signed in |
+| Employee profile | `/employees/{id}` | Signed in (private sections: HR + the person) |
+| My profile | `/me` | Signed in |
+| HR overview | `/dashboard` | HR |
+| Add / edit employees, transfers | Manage menu | HR |
+| Divisions, departments, Head Office, projects, designations | `/manage/{type}` | HR |
+| Sign-in accounts | `/hr/users` | HR |
 
 ## Tech stack
 
@@ -43,28 +78,57 @@ npm install
 cp .env.example .env        # skip if .env already exists
 php artisan key:generate
 
-# 3. Database
-php artisan migrate
+# 3. Database + dummy data (60 made-up employees, projects, divisions…)
+php artisan migrate:fresh --seed
 
 # 4. Run (two terminals)
 php artisan serve           # http://localhost:8000
 npm run dev                 # Vite: CSS/JS with hot reload
 ```
 
+Open http://localhost:8000 and click **Open staff directory**. No sign-in is needed while open access is on.
+
+Dummy data: `php artisan demo:data --fresh` re-creates it, `php artisan demo:data --remove` deletes it (real records are kept). All dummy codes start with `DEMO-`.
+
+When sign-in is switched back on, create the first HR account with `php artisan hr:create hr@ddclbd.com --name="HR Admin"`.
+
 For a production build of the assets: `npm run build`.
+
+## Tests
+
+```bash
+php artisan test
+```
+
+Covers sign-in rules, HR-only access, the directory filters, privacy (regular employees never get salary, NID, TIN, etc., and can't filter by them), transfers, salary history and the organisation pages.
 
 ## Project layout
 
 ```
-routes/web.php                  web pages ( / → home )
-resources/views/home.blade.php  public homepage
-resources/css/home.css          homepage styles (brand colours as CSS variables)
-resources/js/home.js            homepage behaviour (scroll reveal, menu, posting demo)
-vite.config.js                  asset entry points
-docs/database/                  ER diagram (dot/png/svg/pdf) and table notes
+app/Enums/Role.php                    hr / head / employee
+app/Models/                           User, ActivityLog, Division, Department, Designation, Office, Project, Employee, Posting, SalaryStructure
+app/Support/                          DirectoryQuery (directory filters), StructureTypes (organisation pages)
+app/Http/Controllers/Auth/            sign in / out
+app/Http/Controllers/                 Directory, Employee (profile), Dashboard, Account
+app/Http/Controllers/Manage/          HR: employees, transfers, organisation
+app/Http/Controllers/Hr/              HR: sign-in accounts
+app/Http/Middleware/                  signs out deactivated users
+app/Console/Commands/                 php artisan hr:create, php artisan demo:data
+app/Providers/AppServiceProvider.php  permission rules (gates)
+routes/web.php                        all web routes
+database/migrations/                  tables
+resources/views/home.blade.php        public homepage
+resources/views/auth/                 sign-in page
+resources/views/layouts/panel.blade.php  signed-in layout (sidebar + top bar)
+resources/views/directory/, employees/  directory cards, profile
+resources/views/manage/, hr/          HR pages
+resources/css/home.css, panel.css     styles (homepage / signed-in area)
+resources/js/home.js, panel.js        small scripts
+tests/Feature/                        automated tests
+docs/auth.md                          sign-in, roles, permissions
+docs/directory.md                     directory, profiles, privacy rules, HR management
+docs/database/                        ER diagram (dot/png/svg/pdf) and table notes
 ```
-
-More folders (API controllers, models, migrations, docs) will be listed here as they are added.
 
 ## Design notes
 
@@ -88,9 +152,13 @@ The homepage uses placeholder labels and bars instead of invented names or numbe
 
 - [x] Homepage
 - [x] ER diagram, draft 1 (`docs/database/`)
-- [ ] Database: divisions, departments, projects, employees, postings
+- [x] Database: divisions, departments, designations, offices, projects, employees, postings, salary
+- [x] Staff directory with photo cards and filters, employee profiles with privacy rules
+- [x] HR: add / edit / transfer / remove employees; manage divisions, departments, Head Office, projects, designations
 - [ ] REST API (`/api/v1/...`) with CRUD for each resource
 - [ ] Swagger / OpenAPI documentation
-- [ ] Login and roles
+- [ ] Attendance and leave
+- [ ] Payroll
+- [x] Login (email + password), roles (HR / Head / Employee), HR account management, activity log
 - [ ] Connection to the EOI management system
 - [ ] Code guide in `docs/`

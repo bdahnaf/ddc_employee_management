@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Most tests check the permission rules, so they run with sign-in ON. OpenAccessTest covers the open mode. -->
+        <env name="WORKFORCE_OPEN_ACCESS" value="false"/>
     </php>
 </phpunit>

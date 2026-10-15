@@ -14,7 +14,12 @@
 <body>
 
 @php
-    $signIn = Route::has('login') ? route('login') : '#';
+    // Signed-in visitors go straight into the app; guests are sent to sign in first
+    // (protected pages redirect to /login and come back afterwards).
+    // While open access is on (config/workforce.php) nobody needs to sign in.
+    $openAccess = config('workforce.open_access');
+    $signedIn = auth()->check() || $openAccess;
+    $signIn = $signedIn ? route('directory') : route('login');
     $sectors = [
         ['Building & Planning', 'M4 21V9l8-5 8 5v12M9 21v-6h6v6M4 21h16'],
         ['Roads & Bridges', 'M2 18h20M4 18c2-6 6-9 8-9s6 3 8 9M8 18v-4M16 18v-4M12 18V9'],
@@ -37,13 +42,14 @@
         </a>
 
         <nav class="menu" data-menu>
-            <a href="#structure">Structure</a>
-            <a href="#features">Features</a>
+            <a href="{{ route('directory') }}">Staff directory</a>
+            <a href="{{ route('directory', ['place' => 'projects']) }}">Projects</a>
+            <a href="#structure">How it works</a>
             <a href="#sectors">Sectors</a>
         </nav>
 
         <div class="header-end">
-            <a href="{{ $signIn }}" class="pill pill-brick pill-sm">Sign in</a>
+            <a href="{{ $signIn }}" class="pill pill-brick pill-sm">{{ $signedIn ? 'Open Workforce' : 'Sign in' }}</a>
             <button class="burger" type="button" aria-label="Menu" aria-expanded="false" data-burger><span></span><span></span><span></span></button>
         </div>
     </div>
@@ -84,8 +90,14 @@
                 attendance, leave and salary.
             </p>
             <div class="hero-actions reveal" style="--d:.24s">
-                <a href="{{ $signIn }}" class="pill pill-brick">Sign in</a>
-                <a href="#structure" class="pill pill-outline">Learn more</a>
+                <a href="{{ route('directory') }}" class="pill pill-brick">Open staff directory</a>
+                @if (! $signedIn)
+                    <a href="{{ route('login') }}" class="pill pill-outline">Sign in</a>
+                @elseif (auth()->check())
+                    <a href="{{ route('me') }}" class="pill pill-outline">My profile</a>
+                @else
+                    <a href="{{ route('directory', ['place' => 'projects']) }}" class="pill pill-outline">See projects</a>
+                @endif
             </div>
         </div>
 
@@ -117,25 +129,45 @@
     </div>
 </section>
 
-{{-- ================= Overlapping band ================= --}}
-<section class="band-wrap" aria-label="What the system covers">
+{{-- ================= Quick access band (links into the app) ================= --}}
+<section class="band-wrap" aria-label="Quick access">
     <div class="wrap">
         <ul class="band reveal">
             <li>
-                <svg viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12M4 21h16M9 21v-6h6v6"/></svg>
-                <strong>Divisions &amp; departments</strong>
+                <a href="{{ route('directory') }}">
+                    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>
+                    <strong>Staff directory</strong>
+                    <span>Everyone, by division or department</span>
+                </a>
             </li>
             <li>
-                <svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>
-                <strong>HQ &amp; project postings</strong>
+                <a href="{{ route('directory', ['place' => 'hq']) }}">
+                    <svg viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12M4 21h16M9 21v-6h6v6"/></svg>
+                    <strong>Head Office</strong>
+                    <span>Staff posted at HQ</span>
+                </a>
             </li>
             <li>
-                <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4M8 14l2 2 4-4"/></svg>
-                <strong>Attendance &amp; leave</strong>
+                <a href="{{ route('directory', ['place' => 'projects']) }}">
+                    <svg viewBox="0 0 24 24"><path d="M2 18h20M4 18c2-6 6-9 8-9s6 3 8 9M12 18V9"/></svg>
+                    <strong>Projects</strong>
+                    <span>Who is working on which project</span>
+                </a>
             </li>
             <li>
-                <svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 10h18M7 15h3"/></svg>
-                <strong>Salary &amp; payroll</strong>
+                @auth
+                    <a href="{{ route('me') }}">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                        <strong>My profile</strong>
+                        <span>Your details, posting and salary</span>
+                    </a>
+                @else
+                    <a href="{{ route('dashboard') }}">
+                        <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 7h6V4h-6z"/></svg>
+                        <strong>Overview</strong>
+                        <span>Headcount, postings and recent changes</span>
+                    </a>
+                @endauth
             </li>
         </ul>
     </div>
@@ -269,10 +301,10 @@
 <section class="cta">
     <div class="wrap cta-row reveal">
         <div>
-            <h2>Sign in to DDC Workforce</h2>
-            <p>Use the account provided by your admin.</p>
+            <h2>{{ $signedIn ? 'Open DDC Workforce' : 'Sign in to DDC Workforce' }}</h2>
+            <p>{{ $signedIn ? 'Browse the staff directory, projects and Head Office.' : 'Use the account provided by your admin.' }}</p>
         </div>
-        <a href="{{ $signIn }}" class="pill pill-white">Sign in</a>
+        <a href="{{ $signIn }}" class="pill pill-white">{{ $signedIn ? 'Open Workforce' : 'Sign in' }}</a>
     </div>
 </section>
 
