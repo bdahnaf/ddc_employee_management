@@ -1,0 +1,164 @@
+// DDC Workforce — database as built (matches database/migrations).
+// Paste into https://dbdiagram.io to view or edit.
+
+Table divisions {
+  id bigint [pk, increment]
+  name varchar [unique, not null]
+  code varchar [unique]
+  description text
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+Table departments {
+  id bigint [pk, increment]
+  division_id bigint [not null]
+  name varchar [not null]
+  code varchar [unique]
+  description text
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+  indexes { (division_id, name) [unique] }
+}
+
+Table designations {
+  id bigint [pk, increment]
+  title varchar [unique, not null]
+  grade varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table offices {
+  id bigint [pk, increment]
+  name varchar [not null, note: 'e.g. Head Office']
+  code varchar [unique]
+  address text
+  city varchar
+  is_headquarters boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+Table projects {
+  id bigint [pk, increment]
+  division_id bigint [note: 'lead division']
+  name varchar [not null]
+  code varchar [unique]
+  client varchar
+  location varchar
+  start_date date
+  end_date date
+  status varchar [default: 'ongoing', note: 'planned | ongoing | completed']
+  description text
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+Table employees {
+  id bigint [pk, increment]
+  user_id bigint [unique, note: 'optional sign-in account']
+  employee_code varchar [unique, not null]
+  name varchar [not null]
+  photo_path varchar
+  designation_id bigint
+  department_id bigint
+  status varchar [default: 'active', note: 'active | on_leave | resigned | retired']
+  employment_type varchar [default: 'permanent', note: 'permanent | contractual | project']
+  joining_date date
+  office_email varchar
+  office_phone varchar
+  personal_email varchar [note: 'private']
+  personal_phone varchar [note: 'private']
+  date_of_birth date [note: 'private']
+  gender varchar [note: 'private']
+  blood_group varchar [note: 'private']
+  nid_no varchar [unique, note: 'private']
+  tin_no varchar [note: 'private']
+  passport_no varchar [note: 'private']
+  present_address text [note: 'private']
+  permanent_address text [note: 'private']
+  emergency_contact_name varchar [note: 'private']
+  emergency_contact_relation varchar [note: 'private']
+  emergency_contact_phone varchar [note: 'private']
+  bank_name varchar [note: 'private']
+  bank_account_no varchar [note: 'private']
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+Table postings {
+  id bigint [pk, increment]
+  employee_id bigint [not null]
+  posting_type varchar [not null, note: 'hq | project']
+  office_id bigint [note: 'set when hq']
+  project_id bigint [note: 'set when project']
+  role_on_posting varchar
+  start_date date [not null]
+  end_date date [note: 'NULL = current posting']
+  order_ref varchar [note: 'office order no.']
+  remarks text
+  created_by bigint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table salary_structures {
+  id bigint [pk, increment]
+  employee_id bigint [not null]
+  basic decimal(12,2)
+  house_rent decimal(12,2)
+  medical decimal(12,2)
+  conveyance decimal(12,2)
+  other_allowance decimal(12,2)
+  gross decimal(12,2) [note: 'sum of the parts']
+  effective_from date [not null]
+  effective_to date [note: 'NULL = current salary']
+  created_by bigint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table users {
+  id bigint [pk, increment]
+  name varchar [not null]
+  email varchar [unique, not null]
+  password varchar [not null]
+  role varchar [default: 'employee', note: 'hr | head | employee']
+  is_active boolean [default: true]
+  last_login_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table activity_logs {
+  id bigint [pk, increment]
+  user_id bigint
+  user_name varchar
+  action varchar [not null]
+  subject_type varchar
+  subject_id bigint
+  description text
+  ip_address varchar
+  created_at timestamp
+}
+
+Ref: departments.division_id > divisions.id
+Ref: projects.division_id > divisions.id
+Ref: employees.department_id > departments.id
+Ref: employees.designation_id > designations.id
+Ref: employees.user_id - users.id
+Ref: postings.employee_id > employees.id
+Ref: postings.office_id > offices.id
+Ref: postings.project_id > projects.id
+Ref: postings.created_by > users.id
+Ref: salary_structures.employee_id > employees.id
+Ref: salary_structures.created_by > users.id
+Ref: activity_logs.user_id > users.id
